@@ -1,6 +1,5 @@
 """Test configuration and fixtures."""
 import asyncio
-from decimal import Decimal
 from typing import AsyncGenerator
 
 import pytest
@@ -8,9 +7,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.database.base import Base
-from app.database.models import (
-    User, UserStatus, TransactionCategory, CategoryType,
-)
+from app.database.models import User, UserStatus
 from app.database.seeder import seed_categories
 
 # Use in-memory SQLite for tests
@@ -25,9 +22,9 @@ def event_loop():
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def engine():
-    """Create test database engine."""
+    """Create test database engine per test for complete isolation."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
@@ -40,13 +37,12 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def session(engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create test database session with rollback."""
+    """Create test database session with seed categories."""
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
     async with session_maker() as session:
-        # Seed categories
         await seed_categories(session)
         yield session
-        await session.rollback()
+        await session.close()
 
 
 @pytest_asyncio.fixture
@@ -60,8 +56,7 @@ async def test_user(session: AsyncSession) -> User:
         timezone="Asia/Tashkent",
     )
     session.add(user)
-    await session.flush()
-    await session.refresh(user)
+    await session.commit()
     return user
 
 
@@ -76,6 +71,5 @@ async def test_user_2(session: AsyncSession) -> User:
         timezone="Asia/Tashkent",
     )
     session.add(user)
-    await session.flush()
-    await session.refresh(user)
+    await session.commit()
     return user

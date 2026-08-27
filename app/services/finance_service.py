@@ -207,9 +207,12 @@ class FinanceService(BaseService):
             debt.customer_id = customer.id
             await self.session.flush()
 
-        # 8. Dispatch Telegram notification if debt exists and customer opted in
+        # 8. Explicit commit before sending external notification
+        await self.session.commit()
+
+        # 9. Dispatch Telegram notification if debt exists and customer opted in
         notification_sent = False
-        if customer and new_debt > Decimal("0") and customer.telegram_user_id and customer.notifications_enabled:
+        if customer and (new_debt > Decimal("0") or total_debt > Decimal("0")) and customer.telegram_user_id and customer.notifications_enabled:
             notification_sent = await NotificationService.send_sale_debt_notification(
                 bot=bot,
                 customer=customer,

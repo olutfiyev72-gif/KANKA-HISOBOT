@@ -199,9 +199,12 @@ class CustomerService(BaseService):
             debt.customer_id = customer.id
             await self.session.flush()
 
-        # 4. Dispatch Telegram notification if debt exists
+        # 4. Commit DB transaction first
+        await self.session.commit()
+
+        # 5. Dispatch Telegram notification if debt exists
         notification_sent = False
-        if new_debt > Decimal("0") and customer.telegram_user_id and customer.notifications_enabled:
+        if (new_debt > Decimal("0") or total_debt > Decimal("0")) and customer.telegram_user_id and customer.notifications_enabled:
             notification_sent = await NotificationService.send_sale_debt_notification(
                 bot=bot,
                 customer=customer,
@@ -291,7 +294,10 @@ class CustomerService(BaseService):
                 )
                 remaining_to_apply -= apply_amount
 
-        # 4. Dispatch Telegram notification
+        # 4. Commit DB transaction first
+        await self.session.commit()
+
+        # 5. Dispatch Telegram notification
         notification_sent = False
         if customer.telegram_user_id and customer.notifications_enabled:
             notification_sent = await NotificationService.send_debt_payment_notification(

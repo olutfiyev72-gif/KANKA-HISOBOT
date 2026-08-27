@@ -57,21 +57,22 @@ async def sales_entry(message: Message, state: FSMContext, session: AsyncSession
 
 
 async def show_sales_dashboard(message: Message, session: AsyncSession, user: User):
-    """Render sales dashboard with metrics."""
+    """Render sales dashboard with accurate metrics."""
     sale_svc = SaleService(session)
-    now = datetime.now()
-    start_of_day = datetime(now.year, now.month, now.day, 0, 0, 0)
-    end_of_day = datetime(now.year, now.month, now.day, 23, 59, 59)
+    tz = pytz.timezone(user.timezone or "Asia/Tashkent")
+    now = datetime.now(tz)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     today_summary = await sale_svc.get_sales_summary(user.id, date_from=start_of_day, date_to=end_of_day)
 
     text = (
         f"🛒 <b>SOTUVLAR BO'LIMI</b>\n"
         f"{'─' * 28}\n\n"
-        f"📊 Bugungi sotuvlar: <b>{today_summary.total_sales_count} ta</b>\n"
-        f"💰 Bugungi tushum: <b>{format_money(today_summary.total_sales_amount)}</b>\n"
-        f"💵 Qabul qilingan to'lov: <b>{format_money(today_summary.total_paid_amount)}</b>\n"
-        f"🔴 Qarzga berilgan: <b>{format_money(today_summary.total_debt_amount)}</b>\n\n"
+        f"📊 Bugungi sotuvlar soni: <b>{today_summary.total_sales_count} ta</b>\n"
+        f"🛍 <b>Bugungi savdo (jami):</b> <b>{format_money(today_summary.total_sales_amount)}</b>\n"
+        f"💵 <b>Haqiqiy tushum (to'langan):</b> <b>{format_money(today_summary.total_paid_amount)}</b>\n"
+        f"🔴 <b>Yangi qarz (to'lanmagan):</b> <b>{format_money(today_summary.total_debt_amount)}</b>\n\n"
         f"<i>Quyidagi menyudan kerakli bo'limni tanlang:</i>"
     )
 
@@ -88,19 +89,20 @@ async def sales_menu_callback(callback: CallbackQuery, state: FSMContext, sessio
     await state.clear()
     await callback.answer()
     sale_svc = SaleService(session)
-    now = datetime.now()
-    start_of_day = datetime(now.year, now.month, now.day, 0, 0, 0)
-    end_of_day = datetime(now.year, now.month, now.day, 23, 59, 59)
+    tz = pytz.timezone(user.timezone or "Asia/Tashkent")
+    now = datetime.now(tz)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     today_summary = await sale_svc.get_sales_summary(user.id, date_from=start_of_day, date_to=end_of_day)
 
     text = (
         f"🛒 <b>SOTUVLAR BO'LIMI</b>\n"
         f"{'─' * 28}\n\n"
-        f"📊 Bugungi sotuvlar: <b>{today_summary.total_sales_count} ta</b>\n"
-        f"💰 Bugungi tushum: <b>{format_money(today_summary.total_sales_amount)}</b>\n"
-        f"💵 Qabul qilingan to'lov: <b>{format_money(today_summary.total_paid_amount)}</b>\n"
-        f"🔴 Qarzga berilgan: <b>{format_money(today_summary.total_debt_amount)}</b>\n\n"
+        f"📊 Bugungi sotuvlar soni: <b>{today_summary.total_sales_count} ta</b>\n"
+        f"🛍 <b>Bugungi savdo (jami):</b> <b>{format_money(today_summary.total_sales_amount)}</b>\n"
+        f"💵 <b>Haqiqiy tushum (to'langan):</b> <b>{format_money(today_summary.total_paid_amount)}</b>\n"
+        f"🔴 <b>Yangi qarz (to'lanmagan):</b> <b>{format_money(today_summary.total_debt_amount)}</b>\n\n"
         f"<i>Quyidagi menyudan kerakli bo'limni tanlang:</i>"
     )
 

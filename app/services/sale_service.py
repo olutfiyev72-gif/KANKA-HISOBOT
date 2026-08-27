@@ -190,9 +190,12 @@ class SaleService(BaseService):
             debt.customer_id = customer.id
             await self.session.flush()
 
-        # 9. Post-commit Telegram notification
+        # 9. Explicit atomic commit before sending notification
+        await self.session.commit()
+
+        # 10. Post-commit Telegram notification (only after successful DB commit)
         notification_sent = False
-        if customer and new_debt > Decimal("0") and customer.telegram_user_id and customer.notifications_enabled:
+        if customer and (new_debt > Decimal("0") or total_debt > Decimal("0")) and customer.telegram_user_id and customer.notifications_enabled:
             notification_sent = await NotificationService.send_sale_debt_notification(
                 bot=bot,
                 customer=customer,
