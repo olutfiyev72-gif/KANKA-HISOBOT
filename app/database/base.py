@@ -77,27 +77,35 @@ async def create_tables() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
         def _migrate_schema(sync_conn):
-            # Check SQLite pragma table_info
-            try:
-                # 1. transactions.customer_id
-                res_tx = sync_conn.exec_driver_sql("PRAGMA table_info(transactions)").fetchall()
-                if res_tx:
-                    cols_tx = {row[1] for row in res_tx}
-                    if "customer_id" not in cols_tx:
-                        sync_conn.exec_driver_sql(
-                            "ALTER TABLE transactions ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL"
-                        )
-                
-                # 2. debts.customer_id
-                res_debts = sync_conn.exec_driver_sql("PRAGMA table_info(debts)").fetchall()
-                if res_debts:
-                    cols_debts = {row[1] for row in res_debts}
-                    if "customer_id" not in cols_debts:
-                        sync_conn.exec_driver_sql(
-                            "ALTER TABLE debts ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL"
-                        )
-            except Exception:
-                pass
+            dialect = sync_conn.dialect.name
+            if dialect == "sqlite":
+                try:
+                    res_tx = sync_conn.exec_driver_sql("PRAGMA table_info(transactions)").fetchall()
+                    if res_tx:
+                        cols_tx = {row[1] for row in res_tx}
+                        if "customer_id" not in cols_tx:
+                            sync_conn.exec_driver_sql(
+                                "ALTER TABLE transactions ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL"
+                            )
+                    res_debts = sync_conn.exec_driver_sql("PRAGMA table_info(debts)").fetchall()
+                    if res_debts:
+                        cols_debts = {row[1] for row in res_debts}
+                        if "customer_id" not in cols_debts:
+                            sync_conn.exec_driver_sql(
+                                "ALTER TABLE debts ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL"
+                            )
+                except Exception:
+                    pass
+            elif dialect == "postgresql":
+                try:
+                    sync_conn.exec_driver_sql(
+                        "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;"
+                    )
+                    sync_conn.exec_driver_sql(
+                        "ALTER TABLE debts ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;"
+                    )
+                except Exception:
+                    pass
 
         await conn.run_sync(_migrate_schema)
 
