@@ -183,3 +183,53 @@ async def admin_close(callback: CallbackQuery, user: User):
         await callback.message.delete()
     except Exception:
         pass
+
+
+@router.message(Command("test_notification"))
+async def admin_test_notification(message: Message, user: User):
+    """Admin diagnostic command to test direct Telegram API message delivery."""
+    from app.services.notification_service import NotificationService
+
+    args = message.text.split()
+    target_chat_id = user.telegram_id
+    if len(args) > 1 and args[1].isdigit():
+        target_chat_id = int(args[1])
+
+    bot = message.bot
+    bot_me = await bot.get_me()
+
+    diag_info = (
+        f"🤖 <b>Bot Info:</b> @{bot_me.username} (ID: <code>{bot_me.id}</code>)\n"
+        f"🎯 <b>Target Chat ID:</b> <code>{target_chat_id}</code>\n"
+        f"👤 <b>Sender:</b> @{user.username or 'none'} (ID: <code>{user.telegram_id}</code>)\n\n"
+        "⏳ Xabarnoma jo'natilmoqda..."
+    )
+    status_msg = await message.answer(diag_info, parse_mode="HTML")
+
+    res = await NotificationService.send_direct_test_message(
+        bot=bot,
+        chat_id=target_chat_id,
+        test_text=(
+            "🔔 <b>DIAGNOSTIK TEST XABAR!</b>\n\n"
+            f"🏪 <b>{bot_me.first_name}</b> (@{bot_me.username})\n"
+            f"Telegram ID <code>{target_chat_id}</code> ga to'g'ridan-to'g'ri xabarnoma yetkazildi!\n\n"
+            "✅ <i>Telegram Bot API aloqasi 100% ishlamoqda.</i>"
+        ),
+    )
+
+    if res["success"]:
+        await status_msg.edit_text(
+            f"✅ <b>Xabarnoma muvaffaqiyatli yetkazildi!</b>\n\n"
+            f"🎯 <b>Target ID:</b> <code>{target_chat_id}</code>\n"
+            f"📨 <b>Telegram Message ID:</b> <code>{res['message_id']}</code>\n"
+            f"🤖 <b>Bot:</b> @{bot_me.username}",
+            parse_mode="HTML",
+        )
+    else:
+        await status_msg.edit_text(
+            f"❌ <b>Xabarnoma yetkazishda xatolik:</b>\n\n"
+            f"🎯 <b>Target ID:</b> <code>{target_chat_id}</code>\n"
+            f"⚠️ <b>Xatolik sababi:</b> <code>{res['error']}</code>\n\n"
+            f"<i>Eslatma: Agar mijoz botni hali start qilmagan bo'lsa yoki botni bloklagan bo'lsa, Telegram xabar yetkazishga ruxsat bermaydi.</i>",
+            parse_mode="HTML",
+        )

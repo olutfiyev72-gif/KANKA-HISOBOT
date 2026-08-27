@@ -88,7 +88,7 @@ def create_dispatcher() -> Dispatcher:
     @dp.error()
     async def global_error_handler(event_data: ErrorEvent):
         exception = event_data.exception
-        logger.error(f"Unhandled error: {type(exception).__name__}: {exception}")
+        logger.opt(exception=exception).error(f"Unhandled error: {type(exception).__name__}: {exception}")
         try:
             update = event_data.update
             if update and update.message:

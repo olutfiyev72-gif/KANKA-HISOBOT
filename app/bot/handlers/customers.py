@@ -519,7 +519,7 @@ async def cust_sale_confirm(
             paid_amount=paid,
             payment_method=pm_enum,
             description=desc,
-            bot=bot,
+            bot=callback.bot or bot,
             seller_name=seller_name,
         )
 
@@ -659,7 +659,7 @@ async def cust_pay_confirm(
             payment_amount=amount,
             payment_method=pm_enum,
             description=desc,
-            bot=bot,
+            bot=callback.bot or bot,
             seller_name=seller_name,
         )
 

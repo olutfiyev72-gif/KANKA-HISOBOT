@@ -524,7 +524,7 @@ async def sales_basket_confirmed_execute(
             paid_amount=paid,
             payment_method=pm_enum,
             description=desc,
-            bot=bot,
+            bot=callback.bot or bot,
             seller_name=seller_name,
         )
 
